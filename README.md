@@ -1,28 +1,13 @@
 # Rust VS Code Test Explorer
 Rust Test Explorer for VS Code that enables viewing and running your Rust tests from the VS Code Sidebar. 
 
+**This is a fork of the original. This version navigates to the test location if you click on the test.**
+
 ***************************************
 **Functional, but still in an early Beta/Preview !!!!**  
 **Bugs are inevitable** 😁
 ***************************************
 
-[![Version Badge][version-badge]][ext-url]
-[![Installs Badge][installs-badge]][ext-url]
-[![Rating Badge][rating-badge]][ext-url]
-[![License Badge][license-badge]][license-url]  
-
-[![Linux CI Badge][linux-ci-badge]][linux-ci-url]
-[![Mac CI Badge][mac-ci-badge]][mac-ci-url]
-[![Windows CI Badge][windows-ci-badge]][windows-ci-url]  
-
-[![Test Results Badge][tests-badge]][tests-url]
-[![Coverage Badge][coverage-badge]][coverage-url]
-[![Sonar Quality GateBadge][quality-gate-badge]][sonar-project-url]  
-
-[![CircleCI](https://circleci.com/gh/swellaby/vscode-rust-test-adapter.svg?style=shield)](https://circleci.com/gh/swellaby/vscode-rust-test-adapter)
-[![codecov](https://codecov.io/gh/swellaby/vscode-rust-test-adapter/branch/main/graph/badge.svg)](https://codecov.io/gh/swellaby/vscode-rust-test-adapter)
-
-![Screenshot][screenshot-url]
 
 See the [Test Explorer UI Extension][test-explorer-extension-url] for additional information.
 
