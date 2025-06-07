@@ -10,4 +10,6 @@ export interface ITestCaseNode {
     packageName: string;
     category: NodeCategory;
     nodeTarget: INodeTarget;
+    file?: string;  // Path to the file containing the test
+    line?: number;  // Line number where the test is defined
 }

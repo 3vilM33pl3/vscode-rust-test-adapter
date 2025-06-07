@@ -56,7 +56,24 @@ export const initializeTestNode = (
     nodeTarget: INodeTarget
 ): TestInfo => {
     const testNodeId = `${nodeIdPrefix}::${trimmedModulePathParts}`;
+
+    // Extract file location from the test output
+    let file: string | undefined;
+    let line: number | undefined;
+
+    // Try to extract file location from the test output
+    const fileMatch = testName.match(/at (.+):(\d+)/);
+    if (fileMatch) {
+        file = fileMatch[1];
+        line = parseInt(fileMatch[2], 10);
+    }
+
     const testNode = createTestCaseNode(testNodeId, cargoPackage.name, nodeTarget, nodeIdPrefix, trimmedModulePathParts);
+    if (file) {
+        testNode.file = file;
+        testNode.line = line;
+    }
+
     const testInfo = createTestInfo(testNodeId, testName);
     testCasesMap.set(testNodeId, testNode);
     return testInfo;

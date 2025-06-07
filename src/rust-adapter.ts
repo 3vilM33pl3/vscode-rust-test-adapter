@@ -1,5 +1,6 @@
 'use strict';
 
+import * as vscode from 'vscode';
 import {
     TestAdapter,
     TestEvent,
@@ -39,8 +40,50 @@ export class RustAdapter implements TestAdapter {
         this.disposables.push(this.testsEmitter);
         this.disposables.push(this.testStatesEmitter);
         this.disposables.push(this.autorunEmitter);
+
+        // Register command to handle test clicks
+        this.registerTestClickHandler();
     }
     // tslint:enable:typedef
+
+    private registerTestClickHandler() {
+        this.log.info('Registering test click handler');
+        const disposable = vscode.commands.registerCommand('rust-test-explorer.openTest', async (testId: string) => {
+            try {
+                this.log.info(`Handling click on test: ${testId}`);
+                const testCase = this.testCases.get(testId);
+                if (!testCase) {
+                    this.log.warn(`Test case not found for id: ${testId}`);
+                    return;
+                }
+
+                if (!testCase.file) {
+                    this.log.warn(`No file location found for test: ${testId}`);
+                    return;
+                }
+
+                const filePath = testCase.file;
+                const line = testCase.line || 1;
+
+                this.log.info(`Opening file: ${filePath} at line ${line}`);
+                const document = await vscode.workspace.openTextDocument(filePath);
+                const editor = await vscode.window.showTextDocument(document);
+
+                // Reveal the line and select it
+                const position = new vscode.Position(line - 1, 0);
+                editor.selection = new vscode.Selection(position, position);
+                editor.revealRange(
+                    new vscode.Range(position, position),
+                    vscode.TextEditorRevealType.InCenter
+                );
+            } catch (err) {
+                this.log.error(`Error opening test file: ${err}`);
+                vscode.window.showErrorMessage(`Failed to open test file: ${err.message}`);
+            }
+        });
+
+        this.disposables.push(disposable);
+    }
 
     public get tests() { return this.testsEmitter.event; }
     public get testStates() { return this.testStatesEmitter.event; }

@@ -3,3 +3,4 @@ timeout: 175
 reporter: 'mocha-multi-reporters'
 reporter-options: 'configFile=test/unit/mocha-reporter-config.json'
 spec: './test/unit/**/*.js'
+require: './test/unit/setup.js'
