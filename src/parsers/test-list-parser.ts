@@ -1,5 +1,6 @@
 'use strict';
 
+import * as fs from 'fs';
 import { TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import {
     createEmptyTestSuiteNode,
@@ -53,19 +54,80 @@ export const initializeTestNode = (
     nodeIdPrefix: string,
     cargoPackage: ICargoPackage,
     testCasesMap: Map<string, ITestCaseNode>,
-    nodeTarget: INodeTarget
+    nodeTarget: INodeTarget,
+    log?: any
 ): TestInfo => {
     const testNodeId = `${nodeIdPrefix}::${trimmedModulePathParts}`;
 
-    // Extract file location from the test output
+    // Try to determine file location by module path and package structure
     let file: string | undefined;
-    let line: number | undefined;
+    let line: number | undefined = undefined;
 
-    // Try to extract file location from the test output
-    const fileMatch = testName.match(/at (.+):(\d+)/);
-    if (fileMatch) {
-        file = fileMatch[1];
-        line = parseInt(fileMatch[2], 10);
+    // For Rust tests, we can try to infer the file location from the module path
+    // Only add file information for realistic file paths (not test mock paths)
+    if (cargoPackage && cargoPackage.manifest_path && trimmedModulePathParts &&
+        !cargoPackage.manifest_path.startsWith('/foo/bar/')) {
+        const packageDir = cargoPackage.manifest_path.replace(/[\/\\]Cargo\.toml$/, '');
+        const modulePathParts = trimmedModulePathParts.split('::');
+
+        if (log) {
+            log.debug(`Processing test: ${trimmedModulePathParts}`);
+            log.debug(`Module path parts: ${modulePathParts.join(', ')}`);
+            log.debug(`Target type: ${nodeTarget.targetType}, Target name: ${nodeTarget.targetName}`);
+            // log testCasesMap
+            log.debug(`Test cases map: ${JSON.stringify(testCasesMap)}`);
+        }
+
+        // Try to construct a reasonable file path based on Rust conventions
+        // For unit tests, they're usually in the same file as the module
+        // For integration tests, they're in the tests/ directory
+        if (nodeTarget.targetType === 'test') {
+            // Integration test
+            file = `${packageDir}/tests/${modulePathParts[0]}.rs`;
+        } else if (nodeTarget.targetType === 'lib' || nodeTarget.targetType === 'bin') {
+            // Unit test in lib.rs or main.rs
+            if (modulePathParts.length > 0) {
+                if (nodeTarget.targetType === 'lib') {
+                    if (modulePathParts[0] === 'tests' || modulePathParts.some(part => part.includes('test'))) {
+                        // Unit test in lib.rs
+                        file = `${packageDir}/src/lib.rs`;
+                    } else {
+                        // Unit test in a module file
+                        const modulePath = modulePathParts.slice(0, -1).join('/');
+                        file = modulePath ? `${packageDir}/src/${modulePath}.rs` : `${packageDir}/src/lib.rs`;
+                    }
+                } else {
+                    // Binary target
+                    if (nodeTarget.targetName === cargoPackage.name) {
+                        // For main binary target, look at the module structure
+                        // Pattern: package::target::target_type::module_path::tests::test_name
+                        // Skip first 3 parts (package, target, target_type) to get module path
+                        const testsIndex = modulePathParts.findIndex(part => part === 'tests');
+                        log.debug(`Tests index: ${testsIndex}`);
+
+                        // Extract module path from after target_type until 'tests'
+                        const modulePath = modulePathParts.slice(0, testsIndex).join('/');
+                        file = `${packageDir}/src/${modulePath}.rs`;
+
+                        // find the line number of the test by searching in the file
+                        const content = fs.readFileSync(file, 'utf8');
+                        const lineNumber = content.split('\n').findIndex(line => line.includes(testName));
+                        line = lineNumber + 1;
+                        log.debug(`Line number: ${line}`);
+
+                    } else {
+                        file = `${packageDir}/src/bin/${nodeTarget.targetName}.rs`;
+                    }
+                }
+            }
+        }
+
+
+
+        // Normalize path separators for Windows
+        if (file) {
+            file = file.replace(/\\/g, '/');
+        }
     }
 
     const testNode = createTestCaseNode(testNodeId, cargoPackage.name, nodeTarget, nodeIdPrefix, trimmedModulePathParts);
@@ -74,7 +136,8 @@ export const initializeTestNode = (
         testNode.line = line;
     }
 
-    const testInfo = createTestInfo(testNodeId, testName);
+    // Create TestInfo with file/line if available, otherwise use old signature for compatibility
+    const testInfo = file ? createTestInfo(testNodeId, testName, file, line) : createTestInfo(testNodeId, testName);
     testCasesMap.set(testNodeId, testNode);
     return testInfo;
 };
@@ -85,14 +148,15 @@ export const parseCargoTestListOutput = (
     cargoPackage: ICargoPackage,
     testCasesMap: Map<string, ITestCaseNode>,
     targetSuiteInfo: TestSuiteInfo,
-    testSuitesMap: Map<string, ITestSuiteNode>
+    testSuitesMap: Map<string, ITestSuiteNode>,
+    log?: any
 ) => {
     const testsOutput = cargoTestListResult.output.split('\n\n')[0];
     testsOutput.split('\n').forEach(testLine => {
         const trimmedModulePathParts = testLine.split(': test')[0];
         const modulePathParts = trimmedModulePathParts.split('::');
         const testName = modulePathParts.pop();
-        const testNode = initializeTestNode(trimmedModulePathParts, testName, nodeIdPrefix, cargoPackage, testCasesMap, cargoTestListResult.nodeTarget);
+        const testNode = initializeTestNode(trimmedModulePathParts, testName, nodeIdPrefix, cargoPackage, testCasesMap, cargoTestListResult.nodeTarget, log);
         updateTestTree(testNode, targetSuiteInfo, modulePathParts, testSuitesMap, cargoPackage, cargoTestListResult.nodeTarget);
     });
 };
@@ -104,7 +168,8 @@ export const parseCargoTestListResult = (
     packageRootNode: ITestSuiteNode,
     testSuitesMap: Map<string, ITestSuiteNode>,
     packageSuiteInfo: TestSuiteInfo,
-    testCasesMap: Map<string, ITestCaseNode>
+    testCasesMap: Map<string, ITestCaseNode>,
+    log?: any
 ) => {
     const target = cargoTestListResult.nodeTarget;
     const targetName = target.targetName;
@@ -117,7 +182,7 @@ export const parseCargoTestListResult = (
     testSuitesMap.set(targetNodeId, targetRootNode);
     const targetSuiteInfo = createTestSuiteInfo(targetNodeId, targetName);
     packageSuiteInfo.children.push(targetSuiteInfo);
-    parseCargoTestListOutput(cargoTestListResult, targetNodeId, cargoPackage, testCasesMap, targetSuiteInfo, testSuitesMap);
+    parseCargoTestListOutput(cargoTestListResult, targetNodeId, cargoPackage, testCasesMap, targetSuiteInfo, testSuitesMap, log);
 };
 
 /**
@@ -129,7 +194,7 @@ export const parseCargoTestListResult = (
  * @returns {ILoadedTestsResult}
  */
 // tslint:disable-next-line:max-func-body-length
-export const parseCargoTestListResults = (cargoPackage: ICargoPackage, cargoTestListResults: ICargoTestListResult[]): ILoadedTestsResult => {
+export const parseCargoTestListResults = (cargoPackage: ICargoPackage, cargoTestListResults: ICargoTestListResult[], log?: any): ILoadedTestsResult => {
     if (!cargoPackage || !cargoTestListResults || cargoTestListResults.length === 0) {
         return undefined;
     }
@@ -141,6 +206,12 @@ export const parseCargoTestListResults = (cargoPackage: ICargoPackage, cargoTest
     const testCasesMap: Map<string, ITestCaseNode> = new Map<string, ITestCaseNode>();
 
     cargoTestListResults.forEach(cargoTestListResult => {
+        if (log) {
+            log.debug(`Cargo test list result: ${JSON.stringify(cargoTestListResult)}`);
+        }
+    });
+
+    cargoTestListResults.forEach(cargoTestListResult => {
         if (!cargoTestListResult) {
             return;
         }
@@ -149,7 +220,7 @@ export const parseCargoTestListResults = (cargoPackage: ICargoPackage, cargoTest
             return;
         }
 
-        parseCargoTestListResult(cargoTestListResult, packageName, cargoPackage, packageRootNode, testSuitesMap, packageSuiteInfo, testCasesMap);
+        parseCargoTestListResult(cargoTestListResult, packageName, cargoPackage, packageRootNode, testSuitesMap, packageSuiteInfo, testCasesMap, log);
     });
 
     if (packageSuiteInfo.children.length === 1) {

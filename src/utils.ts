@@ -46,10 +46,20 @@ export const createTestSuiteInfo = (id: string, label: string): TestSuiteInfo =>
     };
 };
 
-export const createTestInfo = (id: string, label: string): TestInfo => {
-    return {
+export const createTestInfo = (id: string, label: string, file?: string, line?: number): TestInfo => {
+    const testInfo: TestInfo = {
         id,
         label,
         type: 'test'
     };
+
+    // Add file and line information if available
+    if (file) {
+        testInfo.file = file;
+    }
+    if (line !== undefined && line > 0) {
+        testInfo.line = line;
+    }
+
+    return testInfo;
 };

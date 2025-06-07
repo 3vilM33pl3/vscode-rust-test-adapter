@@ -38,7 +38,7 @@ export const buildRootNodeInfo = (
 export const loadPackageUnitTestTree = async (cargoPackage: ICargoPackage, log: Log) => new Promise<ILoadedTestsResult>(async (resolve, reject) => {
     try {
         const cargoTestListResults = await getCargoUnitTestListForPackage(cargoPackage, log);
-        resolve(parseCargoTestListResults(cargoPackage, cargoTestListResults));
+        resolve(parseCargoTestListResults(cargoPackage, cargoTestListResults, log));
     } catch (err) {
         const baseErrorMessage = `Fatal error while attempting to load unit tests for package: ${cargoPackage.name}`;
         log.debug(`${baseErrorMessage}. Details: ${err}`);
