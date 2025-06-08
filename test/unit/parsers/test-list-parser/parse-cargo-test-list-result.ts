@@ -75,7 +75,7 @@ export default function suite() {
         testSuitesMap = new Map<string, ITestSuiteNode>();
         initPackageStubNodes();
         initTargetStubNodes();
-        parseCargoTestListResult(firstCargoTestListResult, packageName, swansonLibPackage, stubPackageTestSuiteNode, testSuitesMap, stubPackageTestSuiteInfo, testCasesMap);
+        parseCargoTestListResult(firstCargoTestListResult, packageName, swansonLibPackage, stubPackageTestSuiteNode, testSuitesMap, stubPackageTestSuiteInfo, testCasesMap, undefined);
     });
 
     test('Should create correct target root nodes', () => {
@@ -105,7 +105,8 @@ export default function suite() {
             swansonLibPackage,
             testCasesMap,
             stubTargetTestSuiteInfo,
-            expMap
+            expMap,
+            undefined
         ];
         assert.isTrue(parseCargoTestListOutputStub.calledOnceWithExactly(...expArgs));
     });

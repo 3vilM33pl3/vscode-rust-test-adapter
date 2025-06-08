@@ -3,7 +3,7 @@
 import { Log } from 'vscode-test-adapter-util';
 import { TestSuiteInfo } from 'vscode-test-adapter-api';
 
-import { getCargoMetadata, getCargoUnitTestListForPackage } from './cargo';
+import { getCargoMetadata, getCargoUnitTestListForPackage, getCargoIntegrationTestListForPackage } from './cargo';
 import { ILoadedTestsResult } from './interfaces/loaded-tests-result';
 import { ICargoPackage } from './interfaces/cargo-package';
 import { parseCargoTestListResults } from './parsers/test-list-parser';
@@ -46,6 +46,17 @@ export const loadPackageUnitTestTree = async (cargoPackage: ICargoPackage, log: 
     }
 });
 
+export const loadPackageIntegrationTestTree = async (cargoPackage: ICargoPackage, log: Log) => new Promise<ILoadedTestsResult>(async (resolve, reject) => {
+    try {
+        const cargoTestListResults = await getCargoIntegrationTestListForPackage(cargoPackage, log);
+        resolve(parseCargoTestListResults(cargoPackage, cargoTestListResults, log));
+    } catch (err) {
+        const baseErrorMessage = `Fatal error while attempting to load integration tests for package: ${cargoPackage.name}`;
+        log.debug(`${baseErrorMessage}. Details: ${err}`);
+        reject(err);
+    }
+});
+
 /**
  * Loads the specified types of tests for the packages using the provided loader function.
  *
@@ -61,6 +72,9 @@ export const loadTestsForPackages = async (
     log: Log,
     loadTestTypeTreeForPackage: (cargoPackage: ICargoPackage, log: Log) => Promise<ILoadedTestsResult>
 ): Promise<ILoadedTestsResult[]> => {
+    if (!packages || packages.length === 0) {
+        return [];
+    }
     const packageTests = await Promise.all(packages.map(async p => {
         const packageTestResult = await loadTestTypeTreeForPackage(p, log);
         if (!packageTestResult) {
@@ -118,10 +132,15 @@ export const loadDocumentationTests = async (
  * @returns {Promise<ITestTypeLoadedTestsResult>}
  */
 export const loadIntegrationTests = async (
-    _packages: ICargoPackage[],
-    _log: Log
+    packages: ICargoPackage[],
+    log: Log
 ): Promise<ITestTypeLoadedTestsResult> => {
-    return Promise.reject(new Error('Not yet implemented.'));
+    const results = await loadTestsForPackages(packages, log, loadPackageIntegrationTestTree);
+    if (!results || results.length === 0) {
+        return null;
+    }
+    const { testSuiteInfo: rootNode, testSuiteNode } = buildRootNodeInfo(results.map(r => r.rootTestSuite), 'integration', 'integration');
+    return { rootNode, results, testSuiteNode };
 };
 
 /**

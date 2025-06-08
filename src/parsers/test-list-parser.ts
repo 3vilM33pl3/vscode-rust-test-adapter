@@ -83,7 +83,23 @@ export const initializeTestNode = (
         // For integration tests, they're in the tests/ directory
         if (nodeTarget.targetType === 'test') {
             // Integration test
-            file = `${packageDir}/tests/${modulePathParts[0]}.rs`;
+            file = `${packageDir}/tests/${nodeTarget.targetName}.rs`;
+
+            // find the line number of the test by searching in the file
+            try {
+                const content = fs.readFileSync(file, 'utf8');
+                const lineNumber = content.split('\n').findIndex(line => line.includes(testName));
+                line = lineNumber > -1 ? lineNumber + 1 : undefined;
+                if (log) {
+                    log.debug(`Line number: ${line}`);
+                }
+            } catch (err) {
+                if (log) {
+                    log.debug(`Could not read file ${file}: ${err}`);
+                }
+                line = undefined;
+            }
+
         } else if (nodeTarget.targetType === 'lib' || nodeTarget.targetType === 'bin') {
             // Unit test in lib.rs or main.rs
             if (modulePathParts.length > 0) {
@@ -110,10 +126,19 @@ export const initializeTestNode = (
                         file = `${packageDir}/src/${modulePath}.rs`;
 
                         // find the line number of the test by searching in the file
-                        const content = fs.readFileSync(file, 'utf8');
-                        const lineNumber = content.split('\n').findIndex(line => line.includes(testName));
-                        line = lineNumber + 1;
-                        log.debug(`Line number: ${line}`);
+                        try {
+                            const content = fs.readFileSync(file, 'utf8');
+                            const lineNumber = content.split('\n').findIndex(line => line.includes(testName));
+                            line = lineNumber > -1 ? lineNumber + 1 : undefined;
+                            if (log) {
+                                log.debug(`Line number: ${line}`);
+                            }
+                        } catch (err) {
+                            if (log) {
+                                log.debug(`Could not read file ${file}: ${err}`);
+                            }
+                            line = undefined;
+                        }
 
                     } else {
                         file = `${packageDir}/src/bin/${nodeTarget.targetName}.rs`;

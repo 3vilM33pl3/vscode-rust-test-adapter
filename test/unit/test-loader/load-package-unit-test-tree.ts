@@ -47,6 +47,6 @@ export default function suite() {
         const result = await loadPackageUnitTestTree(swansonLibPackage, logStub);
         assert.deepEqual(result, binLoadedTestsResultStub);
         assert.isTrue(getCargoUnitTestListForPackageStub.calledWithExactly(swansonLibPackage, logStub));
-        assert.isTrue(parseCargoTestListResultsStub.calledWithExactly(swansonLibPackage, cargoTestListResults));
+        assert.isTrue(parseCargoTestListResultsStub.calledWithExactly(swansonLibPackage, cargoTestListResults, logStub));
     });
 }

@@ -51,7 +51,7 @@ suite('RustAdapter Tests:', () => {
             autoRunEmitterStub: autoRunEmitter
         } = rustAdapterParams;
         loadWorkspaceTestsStub = Sinon.stub(testLoader, 'loadWorkspaceTests')
-            .withArgs(workspaceRootDirectoryPath, log, <IConfiguration>{ loadUnitTests: true })
+            .withArgs(workspaceRootDirectoryPath, log, <IConfiguration>{ loadUnitTests: true, loadIntegrationTests: true, loadDocumentationTests: false })
             .callsFake(() => Promise.resolve(binLoadedTestsResultStub));
         rustAdapter = new RustAdapter(workspaceRootDirectoryPath, log, testsEmitter, testStatesEmitter, autoRunEmitter);
     });

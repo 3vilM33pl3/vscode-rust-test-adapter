@@ -93,7 +93,7 @@ export default function suite() {
     });
 
     test('Should pass correct args to create tree nodes', () => {
-        parseCargoTestListResults(swansonLibPackage, cargoTestListResults);
+        parseCargoTestListResults(swansonLibPackage, cargoTestListResults, undefined);
         assert.isTrue(createEmptyTestSuiteNodeStub.calledWithExactly(packageName, swansonLibPackage));
         assert.isTrue(createTestSuiteInfoStub.calledWithExactly(packageName, packageName));
     });
@@ -105,7 +105,7 @@ export default function suite() {
                 output: '0 tests,'
             }
         ];
-        const loadedTestsResult: ILoadedTestsResult = parseCargoTestListResults(swansonLibPackage, noDiscoveredTests);
+        const loadedTestsResult: ILoadedTestsResult = parseCargoTestListResults(swansonLibPackage, noDiscoveredTests, undefined);
         const testSuitesMap = new Map<string, ITestSuiteNode>();
         testSuitesMap.set(packageName, stubTestSuiteNode);
         assert.deepEqual(loadedTestsResult, <ILoadedTestsResult> {
@@ -122,7 +122,7 @@ export default function suite() {
                 output: 'foo\n0 tests, 2 benchmarks'
             }
         ];
-        const loadedTestsResult: ILoadedTestsResult = parseCargoTestListResults(swansonLibPackage, noDiscoveredTests);
+        const loadedTestsResult: ILoadedTestsResult = parseCargoTestListResults(swansonLibPackage, noDiscoveredTests, undefined);
         const testSuitesMap = new Map<string, ITestSuiteNode>();
         testSuitesMap.set(packageName, stubTestSuiteNode);
         assert.deepEqual(loadedTestsResult, <ILoadedTestsResult> {
@@ -136,14 +136,15 @@ export default function suite() {
         const testSuitesMap = new Map<string, ITestSuiteNode>();
         testSuitesMap.set(packageName, stubTestSuiteNode);
         const testCasesMap = new Map<string, ITestCaseNode>();
-        parseCargoTestListResults(swansonLibPackage, cargoTestListResults);
+        parseCargoTestListResults(swansonLibPackage, cargoTestListResults, undefined);
         const commonCallArgs = [
             packageName,
             swansonLibPackage,
             stubTestSuiteNode,
             testSuitesMap,
             stubTestSuiteInfo,
-            testCasesMap
+            testCasesMap,
+            undefined
         ];
         assert.isTrue(parseCargoTestListResultStub.calledWithExactly(
             cargoTestListResults[0],
@@ -164,7 +165,7 @@ export default function suite() {
                 output: '\n80 tests, 0 benchmarks'
             }
         ];
-        parseCargoTestListResults(swansonLibPackage, multipleOfTenTests);
+        parseCargoTestListResults(swansonLibPackage, multipleOfTenTests, undefined);
         assert.isTrue(parseCargoTestListResultStub.called);
     });
 
@@ -189,7 +190,7 @@ export default function suite() {
         const expSuiteInfo: TestSuiteInfo = JSON.parse(JSON.stringify(suiteInfo));
         expSuiteInfo.children = childSuiteInfo.children;
         createTestSuiteInfoStub.callsFake(() => suiteInfo);
-        const loadedTestsResult: ILoadedTestsResult = parseCargoTestListResults(swansonLibPackage, cargoTestListResults);
+        const loadedTestsResult: ILoadedTestsResult = parseCargoTestListResults(swansonLibPackage, cargoTestListResults, undefined);
         const testSuitesMap = new Map<string, ITestSuiteNode>();
         testSuitesMap.set(packageName, stubTestSuiteNode);
         assert.deepEqual(loadedTestsResult, <ILoadedTestsResult> {

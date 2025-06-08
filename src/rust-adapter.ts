@@ -207,7 +207,11 @@ export class RustAdapter implements TestAdapter {
         this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
         try {
-            const loadedTests = await loadWorkspaceTests(this.workspaceRootDirectoryPath, this.log, <IConfiguration>{ loadUnitTests: true });
+            const loadedTests = await loadWorkspaceTests(this.workspaceRootDirectoryPath, this.log, <IConfiguration>{
+                loadUnitTests: true,
+                loadIntegrationTests: true,
+                loadDocumentationTests: false
+            });
 
             if (!loadedTests) {
                 this.log.warn('No tests found in workspace');

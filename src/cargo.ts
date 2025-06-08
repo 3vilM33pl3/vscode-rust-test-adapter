@@ -162,6 +162,19 @@ export const getCargoUnitTestListForPackage = async (
     );
 };
 
+export const getCargoIntegrationTestListForPackage = async (
+    cargoPackage: ICargoPackage,
+    log: Log,
+    additionalArgs: string = ''
+): Promise<ICargoTestListResult[]> => {
+    return getCargoTestListForPackage(
+        cargoPackage,
+        log,
+        [TargetType.test],
+        additionalArgs
+    );
+};
+
 export const runCargoTestsForPackageTargetWithFormat = async (
     params: ICargoTestExecutionParameters,
     format: string,

@@ -45,7 +45,7 @@ export default function suite() {
     });
 
     test('Should correctly handle single test', () => {
-        parseCargoTestListOutput(firstCargoTestListResult, firstExpTargetNodeId, swansonLibPackage, testCasesMap, stubPackageTestSuiteInfo, testSuitesMap);
+        parseCargoTestListOutput(firstCargoTestListResult, firstExpTargetNodeId, swansonLibPackage, testCasesMap, stubPackageTestSuiteInfo, testSuitesMap, undefined);
         assert.deepEqual(initializeTestNodeStub.callCount, 1);
         assert.deepEqual(updateTestTreeStub.callCount, 1);
         const expInitializeTestNodeStubArgs = [
@@ -54,14 +54,15 @@ export default function suite() {
             firstExpTargetNodeId,
             swansonLibPackage,
             testCasesMap,
-            firstTarget
+            firstTarget,
+            undefined
         ];
         assert.isTrue(initializeTestNodeStub.calledOnceWithExactly(...expInitializeTestNodeStubArgs));
         assert.isTrue(updateTestTreeStub.calledOnceWithExactly(stubTestInfo, stubPackageTestSuiteInfo, [ 'tests' ], testSuitesMap, swansonLibPackage, firstTarget));
     });
 
     test('Should correctly handle multiple tests', () => {
-        parseCargoTestListOutput(secondCargoTestListResult, secondExpTargetNodeId, swansonLibPackage, testCasesMap, stubPackageTestSuiteInfo, testSuitesMap);
+        parseCargoTestListOutput(secondCargoTestListResult, secondExpTargetNodeId, swansonLibPackage, testCasesMap, stubPackageTestSuiteInfo, testSuitesMap, undefined);
         assert.deepEqual(initializeTestNodeStub.callCount, 2);
         assert.deepEqual(updateTestTreeStub.callCount, 2);
         const expFirstInitCallArgs = [
@@ -70,7 +71,8 @@ export default function suite() {
             secondExpTargetNodeId,
             swansonLibPackage,
             testCasesMap,
-            secondTarget
+            secondTarget,
+            undefined
         ];
         assert.isTrue(initializeTestNodeStub.firstCall.calledWithExactly(...expFirstInitCallArgs));
         const expSecondInitCallArgs = [
@@ -79,7 +81,8 @@ export default function suite() {
             secondExpTargetNodeId,
             swansonLibPackage,
             testCasesMap,
-            secondTarget
+            secondTarget,
+            undefined
         ];
         assert.isTrue(initializeTestNodeStub.secondCall.calledWithExactly(...expSecondInitCallArgs));
         assert.isTrue(updateTestTreeStub.calledWithExactly(stubTestInfo, stubPackageTestSuiteInfo, [ 'tests', 'foo' ], testSuitesMap, swansonLibPackage, secondTarget));
