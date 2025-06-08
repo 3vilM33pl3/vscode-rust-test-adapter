@@ -3,6 +3,10 @@ Rust Test Explorer for VS Code that enables viewing and running your Rust tests 
 
 **This is a fork of the original. This version navigates to the test location if you click on the test.**
 
+## Install
+[Download release](https://github.com/3vilM33pl3/vscode-rust-test-adapter/releases/download/v0.11.3/vscode-rust-test-adapter-0.11.3.vsix) and install in VSCode from command pallet: Extensions: Install from VSIX....
+
+
 ***************************************
 **Functional, but still in an early Beta/Preview !!!!**  
 **Bugs are inevitable** 😁
