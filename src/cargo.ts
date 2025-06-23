@@ -32,17 +32,69 @@ export const runCargoCommand = async (
     allowStderr: boolean = false,
     requireStderr: boolean = false
 ) => new Promise<string>((resolve, reject) => {
-    const cmd = `cargo ${subCommand} ${args}`;
+    // Try to find cargo - prioritize snap path since user confirmed it's there
+    let cargoPath = process.env.CARGO_PATH || '/snap/bin/cargo';
+    
+    // If snap path doesn't work, fall back to PATH lookup
+    if (cargoPath === '/snap/bin/cargo') {
+        // Test if snap cargo exists first
+        try {
+            require('fs').accessSync('/snap/bin/cargo', require('fs').constants.F_OK);
+        } catch {
+            cargoPath = 'cargo'; // Fall back to PATH lookup
+        }
+    }
+    
+    const cmd = `${cargoPath} ${subCommand} ${args}`;
     const execArgs: ExecOptions = {
         cwd: targetWorkspace,
-        maxBuffer
+        maxBuffer,
+        env: {
+            ...process.env,
+            PATH: `${process.env.PATH}:/snap/bin:/usr/local/bin:${process.env.HOME}/.cargo/bin`
+        }
     };
+    
+    // Log the command being executed
+    console.log(`[DEBUG] Executing command: ${cmd}`);
+    console.log(`[DEBUG] Working directory: ${targetWorkspace}`);
+    console.log(`[DEBUG] Max buffer: ${maxBuffer}`);
+    console.log(`[DEBUG] PATH: ${process.env.PATH}`);
+    console.log(`[DEBUG] CARGO_HOME: ${process.env.CARGO_HOME || 'Not set'}`);
+    console.log(`[DEBUG] RUSTUP_HOME: ${process.env.RUSTUP_HOME || 'Not set'}`);
+    
+    // Test if cargo is available first
+    exec('which cargo', { cwd: targetWorkspace }, (whichErr, whichStdout, whichStderr) => {
+        console.log(`[DEBUG] 'which cargo' result:`);
+        console.log(`[DEBUG]   Error: ${whichErr ? whichErr.message : 'None'}`);
+        console.log(`[DEBUG]   Path: ${whichStdout || 'Not found'}`);
+        console.log(`[DEBUG]   Stderr: ${whichStderr || 'None'}`);
+    });
+    
     exec(cmd, execArgs, (err, stdout, stderr) => {
+        console.log(`[DEBUG] Command completed:`);
+        console.log(`[DEBUG]   Error: ${err ? err.message : 'None'}`);
+        console.log(`[DEBUG]   Exit code: ${err ? err.code : 'N/A'}`);
+        console.log(`[DEBUG]   Stdout length: ${stdout ? stdout.length : 0}`);
+        console.log(`[DEBUG]   Stderr length: ${stderr ? stderr.length : 0}`);
+        console.log(`[DEBUG]   Stderr content: ${stderr || 'None'}`);
+        
         if (err) {
+            const errorDetails = {
+                command: cmd,
+                workingDirectory: targetWorkspace,
+                exitCode: err.code,
+                signal: err.signal,
+                stderr: stderr,
+                stdout: stdout
+            };
+            const enhancedError = new Error(`Command failed: ${cmd}\nExit code: ${err.code}\nStderr: ${stderr}\nStdout: ${stdout}`);
+            (enhancedError as any).details = errorDetails;
+            
             if (!allowStderr) {
-                return reject(err);
+                return reject(enhancedError);
             } else if (!stderr && requireStderr) {
-                return reject(err);
+                return reject(enhancedError);
             }
         }
         resolve(stdout);
@@ -58,11 +110,27 @@ export const getCargoMetadata = async (
     const args = '--no-deps --format-version 1';
     try {
         const stdout = await runCargoCommand(cargoSubCommand, args, targetWorkspace, maxBuffer);
+        if (log.enabled) {
+            log.debug(`Cargo metadata command output length: ${stdout.length}`);
+            log.debug(`Cargo metadata raw output: ${stdout.substring(0, 200)}${stdout.length > 200 ? '...' : ''}`);
+        }
+        
+        if (!stdout || stdout.trim().length === 0) {
+            const errorMessage = 'Cargo metadata command returned empty output';
+            log.debug(errorMessage);
+            reject(new Error(errorMessage));
+            return;
+        }
+        
         const cargoMetadata: ICargoMetadata = JSON.parse(stdout);
         resolve(cargoMetadata);
     } catch (err) {
         const baseErrorMessage = 'Unable to parse cargo metadata output';
-        log.debug(`${baseErrorMessage}. Details: ${err}`);
+        if (err instanceof SyntaxError) {
+            log.debug(`${baseErrorMessage}. JSON parsing failed - stdout was: "${stdout}"`);
+        } else {
+            log.debug(`${baseErrorMessage}. Command execution failed: ${err}`);
+        }
         reject(new Error(baseErrorMessage));
     }
 });

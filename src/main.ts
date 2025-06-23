@@ -24,26 +24,62 @@ const registerAdapter = (
 };
 
 export async function activate(context: vscode.ExtensionContext) {
-    const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
+    const workspaceFolders = vscode.workspace.workspaceFolders || [];
+    const workspaceFolder = workspaceFolders[0];
     const log = new Log('rustTestExplorer', workspaceFolder, 'Rust Explorer Log');
     context.subscriptions.push(log);
+
+    if (log.enabled) {
+        log.info(`Found ${workspaceFolders.length} workspace folder(s)`);
+        workspaceFolders.forEach((folder, index) => {
+            log.info(`  Workspace ${index + 1}: ${folder.uri.fsPath}`);
+        });
+    }
 
     const testExplorerExtension = vscode.extensions.getExtension<TestHub>(testExplorerExtensionId);
     if (log.enabled) {
         log.info(`Test Explorer ${testExplorerExtension ? '' : 'not '}found`);
     }
 
-    if (testExplorerExtension) {
-        const testsEmitter = new vscode.EventEmitter<TestLoadEvent>();
-        const testStatesEmitter = new vscode.EventEmitter<TestRunEvent>();
-        const autorunEmitter = new vscode.EventEmitter<void>();
-        const adapterFactory = workspaceFolder => new RustAdapter(
-            workspaceFolder.uri.fsPath,
-            log,
-            testsEmitter,
-            testStatesEmitter,
-            autorunEmitter
-        );
-        registerAdapter(testExplorerExtension, context, adapterFactory);
+    const setupAdapter = () => {
+        const currentWorkspaceFolders = vscode.workspace.workspaceFolders || [];
+        if (testExplorerExtension && currentWorkspaceFolders.length > 0) {
+            const testsEmitter = new vscode.EventEmitter<TestLoadEvent>();
+            const testStatesEmitter = new vscode.EventEmitter<TestRunEvent>();
+            const autorunEmitter = new vscode.EventEmitter<void>();
+            const adapterFactory = (workspaceFolder: vscode.WorkspaceFolder) => new RustAdapter(
+                workspaceFolder.uri.fsPath,
+                log,
+                testsEmitter,
+                testStatesEmitter,
+                autorunEmitter
+            );
+            registerAdapter(testExplorerExtension, context, adapterFactory);
+            if (log.enabled) {
+                log.info('Rust test adapter registered successfully');
+            }
+        }
+    };
+
+    // Try to setup adapter immediately
+    setupAdapter();
+
+    // Listen for workspace folder changes
+    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(event => {
+        if (log.enabled) {
+            log.info(`Workspace folders changed: +${event.added.length} -${event.removed.length}`);
+            event.added.forEach(folder => log.info(`  Added: ${folder.uri.fsPath}`));
+            event.removed.forEach(folder => log.info(`  Removed: ${folder.uri.fsPath}`));
+        }
+        setupAdapter();
+    }));
+
+    if (log.enabled) {
+        if (!testExplorerExtension) {
+            log.info('Test Explorer extension not found');
+        }
+        if (workspaceFolders.length === 0) {
+            log.info('No workspace folders found - waiting for workspace to be opened');
+        }
     }
 }
