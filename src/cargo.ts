@@ -108,8 +108,9 @@ export const getCargoMetadata = async (
 ) => new Promise<ICargoMetadata>(async (resolve, reject) => {
     const cargoSubCommand = 'metadata';
     const args = '--no-deps --format-version 1';
+    let stdout = '';
     try {
-        const stdout = await runCargoCommand(cargoSubCommand, args, targetWorkspace, maxBuffer);
+        stdout = await runCargoCommand(cargoSubCommand, args, targetWorkspace, maxBuffer);
         if (log.enabled) {
             log.debug(`Cargo metadata command output length: ${stdout.length}`);
             log.debug(`Cargo metadata raw output: ${stdout.substring(0, 200)}${stdout.length > 200 ? '...' : ''}`);
