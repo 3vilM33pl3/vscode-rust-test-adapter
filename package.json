@@ -2,30 +2,30 @@
   "name": "vscode-rust-test-adapter",
   "displayName": "Rust Test Explorer",
   "description": "View and run your Rust tests in the Sidebar of Visual Studio Code",
-  "version": "0.11.5",
+  "version": "0.11.6",
   "license": "MIT",
   "preview": true,
   "private": true,
-  "publisher": "Swellaby",
+  "publisher": "Robot Motel",
   "icon": "images/rust3.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/swellaby/vscode-rust-test-adapter.git"
   },
   "author": {
-    "url": "http://swellaby.com",
-    "name": "Swellaby",
-    "email": "opensource@swellaby.com"
+    "url": "http://robotmotel.com",
+    "name": "Robot Motel",
+    "email": "opensource@robotmotel.com"
   },
   "contributors": [
     {
-      "email": "opensource@swellaby.com",
-      "name": "Caleb Cartwright",
-      "url": "https://github.com/calebcartwright"
+      "email": "opensource@robotmotel.com",
+      "name": "3vilM33pl3",
+      "url": "https://github.com/3vilm33pl3"
     }
   ],
   "bugs": {
-    "url": "https://github.com/swellaby/vscode-rust-test-adapter/issues/new/choose"
+    "url": "https://github.com/3vilm33pl3/vscode-rust-test-adapter/issues/new/choose"
   },
   "scripts": {
     "build": "npm run coverage:enforce && npm run lint:build",

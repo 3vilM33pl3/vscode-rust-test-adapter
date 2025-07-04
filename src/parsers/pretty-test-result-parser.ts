@@ -16,12 +16,45 @@ const parseTestResult = (testIdPrefix: string, testOutputLine: string): TestEven
     const firstNewLineIndex = rhs.indexOf('\n');
     const testResult = firstNewLineIndex > 0 ? rhs.substring(0, firstNewLineIndex).toLowerCase() : rhs.toLowerCase();
     const state = getTestEventState(testResult);
-    return buildTestEvent(state, test);
+
+    // Extract detailed output/error message if available
+    let message: string | undefined;
+    if (firstNewLineIndex > 0 && rhs.length > firstNewLineIndex + 1) {
+        message = rhs.substring(firstNewLineIndex + 1).trim();
+    }
+
+    return buildTestEvent(state, test, message);
 };
 
-// TODO: We need to check for and parse `failures` first, probably into some kind of Dictionary
-// that is keyed off the test name. That data structure then needs to be funneled along to the
-// parsing of the test result
+const extractFailureDetails = (output: string): Map<string, string> => {
+    const failureDetails = new Map<string, string>();
+
+    // Look for the first failures section that contains detailed output
+    const failuresMatch = output.match(/failures:\s*\n\n(----[\s\S]*?)(?=\n\nfailures:|test result:|$)/);
+    if (failuresMatch) {
+        const failuresSection = failuresMatch[1];
+
+        // Split by test failure markers (lines starting with "---- test_name")
+        const failureBlocks = failuresSection.split(/\n---- /);
+
+        for (let i = 0; i < failureBlocks.length; i++) {
+            const block = failureBlocks[i].replace(/^---- /, ''); // Remove leading dashes if present
+            const lines = block.split('\n');
+            if (lines.length > 0) {
+                const testNameMatch = lines[0].match(/^(.+?)\s+stdout/);
+                if (testNameMatch) {
+                    const testName = testNameMatch[1];
+                    // Join remaining lines as the failure message
+                    const failureMessage = lines.slice(1).join('\n').trim();
+                    failureDetails.set(testName, failureMessage);
+                }
+            }
+        }
+    }
+
+    return failureDetails;
+};
+
 const extractTestEventResultsFromPrettyOutput = (
     testIdPrefix: string,
     output: string,
@@ -32,11 +65,29 @@ const extractTestEventResultsFromPrettyOutput = (
     const startMessageSummary = output.substring(startMessageIndex, startMessageEndIndex);
 
     if (startMessageSummary !== 'running 0 tests') {
+        // Extract detailed failure information
+        const failureDetails = extractFailureDetails(output);
+
         const testResultsOutput = output.substring(startMessageEndIndex).split('\n\n')[0];
         const testResultLines = testResultsOutput.split('\ntest ');
         // First element will be an empty string as `testResultsOutput` starts with `\ntest `
         for (let i = 1; i < testResultLines.length; i++) {
-            testResults.push(parseTestResult(testIdPrefix, testResultLines[i]));
+            const testEvent = parseTestResult(testIdPrefix, testResultLines[i]);
+
+            // If this test failed and we have detailed failure info, use it
+            if (testEvent.state === 'failed') {
+                const testId = typeof testEvent.test === 'string' ? testEvent.test : testEvent.test.id;
+                // Try different combinations to find the matching failure
+                for (const [failureKey, failureMessage] of failureDetails) {
+                    // Check if the test ID ends with the failure key
+                    if (testId.endsWith(`::${failureKey}`)) {
+                        testEvent.message = failureMessage;
+                        break;
+                    }
+                }
+            }
+
+            testResults.push(testEvent);
         }
     }
 
