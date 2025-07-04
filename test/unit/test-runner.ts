@@ -77,7 +77,8 @@ suite('testRunner Tests:', () => {
                 nodeTarget: binTestCase3.nodeTarget,
                 packageName: binTestCase3.packageName,
                 targetWorkspace: workspaceDir,
-                testBinaryArgs: '--exact'
+                testBinaryArgs: '--exact',
+                log: logStub
             });
         });
 
@@ -137,14 +138,16 @@ suite('testRunner Tests:', () => {
                 cargoSubCommandArgs: `${testSuite.testSpecName} --no-fail-fast`,
                 nodeTarget: firstTarget,
                 packageName: testSuite.packageName,
-                targetWorkspace: workspaceDir
+                targetWorkspace: workspaceDir,
+                log: logStub
             });
             const secondTargetArgs: ICargoTestExecutionParameters = runCargoTestsForPackageTargetWithPrettyFormatStub.secondCall.args[0];
             assert.deepEqual(secondTargetArgs, <ICargoTestExecutionParameters> {
                 cargoSubCommandArgs: `${testSuite.testSpecName} --no-fail-fast`,
                 nodeTarget: secondTarget,
                 packageName: testSuite.packageName,
-                targetWorkspace: workspaceDir
+                targetWorkspace: workspaceDir,
+                log: logStub
             });
         });
 

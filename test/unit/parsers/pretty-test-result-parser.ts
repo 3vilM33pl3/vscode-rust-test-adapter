@@ -104,5 +104,32 @@ suite('pretty-test-result-parser Tests:', () => {
             const testResults = parseTestCaseResultPrettyOutput(testIdPrefix, singleTestResult);
             assert.deepEqual(testResults, [ testAddResultEvent ]);
         });
+
+        test('Should extract and include failure messages for failed tests', () => {
+            const { mixedTestResults } = testRunOutputs;
+            getTestEventStateStub.onFirstCall().returns('passed');
+            getTestEventStateStub.onSecondCall().returns('failed');
+            
+            const failedEvent = {
+                state: 'failed',
+                test: `${testIdPrefix}::tests::test_bad_add`,
+                type: 'test',
+                message: undefined
+            };
+            
+            buildTestEventStub.onFirstCall().returns(testAddResultEvent);
+            buildTestEventStub.onSecondCall().returns(failedEvent);
+            
+            const testResults = parseTestCaseResultPrettyOutput(testIdPrefix, mixedTestResults);
+            
+            // The parser should have added the failure message to the failed test
+            assert.equal(testResults.length, 2);
+            assert.deepEqual(testResults[0], testAddResultEvent);
+            assert.equal(testResults[1].state, 'failed');
+            assert.equal(testResults[1].test, failedEvent.test);
+            assert.include(testResults[1].message, 'assertion failed');
+            assert.include(testResults[1].message, 'left: `0`');
+            assert.include(testResults[1].message, 'right: `1`');
+        });
     });
 });
