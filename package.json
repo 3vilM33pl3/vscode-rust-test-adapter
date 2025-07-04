@@ -6,7 +6,7 @@
   "license": "MIT",
   "preview": true,
   "private": true,
-  "publisher": "Robot Motel",
+  "publisher": "RobotMotel",
   "icon": "images/rust3.png",
   "repository": {
     "type": "git",
@@ -78,6 +78,7 @@
   "main": "src/main.js",
   "dependencies": {
     "tslib": "^2.4.0",
+    "vsce": "^2.15.0",
     "vscode-test-adapter-api": "^1.7.0",
     "vscode-test-adapter-util": "^0.7.0"
   },
