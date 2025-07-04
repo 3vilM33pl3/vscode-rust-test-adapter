@@ -13,6 +13,7 @@ import {
 import { RustAdapter } from '../../src/rust-adapter';
 import * as testLoader from '../../src/test-loader';
 import * as testRunner from '../../src/test-runner';
+import * as vscode from 'vscode';
 import {
     rustAdapterParamStubs,
     rustAdapterParams,
@@ -29,6 +30,7 @@ suite('RustAdapter Tests:', () => {
     let testsEmitterFireStub: Sinon.SinonStub;
     let testStatesEmitterFireStub: Sinon.SinonStub;
     let loadWorkspaceTestsStub: Sinon.SinonStub;
+    let vscodeCommandsRegisterCommandStub: Sinon.SinonStub;
     let rustAdapter: RustAdapter;
     const workspaceRootDirectoryPath = '/usr/me/rusty-hook';
     const {
@@ -44,6 +46,10 @@ suite('RustAdapter Tests:', () => {
         logErrorStub = rustAdapterParamStubs.log.getErrorStub();
         testsEmitterFireStub = Sinon.stub(rustAdapterParams.testsEmitterStub, 'fire');
         testStatesEmitterFireStub = Sinon.stub(rustAdapterParams.testStatesEmitterStub, 'fire');
+        
+        // Stub VS Code API methods
+        vscodeCommandsRegisterCommandStub = Sinon.stub(vscode.commands, 'registerCommand');
+        
         const {
             logStub: log,
             testsEmitterStub: testsEmitter,
@@ -64,6 +70,71 @@ suite('RustAdapter Tests:', () => {
     suite('constructor()', () => {
         test('Should display correct initialization method', async () => {
             assert.isTrue(logInfoStub.firstCall.calledWithExactly('Initializing Rust adapter'));
+        });
+
+        test('Should register test navigation command', () => {
+            assert.isTrue(vscodeCommandsRegisterCommandStub.calledOnce);
+            assert.isTrue(vscodeCommandsRegisterCommandStub.calledWith('rust-test-explorer.openTest'));
+            assert.isTrue(logInfoStub.calledWith('Registering test navigation command'));
+        });
+    });
+
+    suite('navigateToTest()', () => {
+        let commandCallback: (testId: string) => Promise<void>;
+
+        setup(async () => {
+            await rustAdapter.load();
+            // Extract the callback function registered with the command
+            commandCallback = vscodeCommandsRegisterCommandStub.firstCall.args[1];
+        });
+
+        test('Should navigate to test when test case exists with file', async () => {
+            const testId = binTestCases.binTestCase1.id;
+
+            await commandCallback(testId);
+
+            assert.isTrue(logInfoStub.calledWith(`Handling navigation request for test: ${testId}`));
+            assert.isTrue(logInfoStub.calledWith(`Attempting to navigate to test with ID: ${testId}`));
+        });
+
+        test('Should show warning when test case not found', async () => {
+            const testId = 'nonexistent::test';
+
+            await commandCallback(testId);
+
+            assert.isTrue(logWarnStub.calledWith(`Test case not found for id: ${testId}, searching in test suites...`));
+            assert.isTrue(logWarnStub.calledWith(`No test case found for id: ${testId}`));
+        });
+
+        test('Should show info message when trying to navigate to test suite', async () => {
+            const testSuiteId = binTestSuites.binTestSuite3.id;
+
+            await commandCallback(testSuiteId);
+
+            assert.isTrue(logInfoStub.calledWith(`Found test suite for id: ${testSuiteId}, but navigation is only supported for individual tests`));
+        });
+
+        test('Should show warning when test case has no file location', async () => {
+            const testCaseWithoutFile = { ...binTestCases.binTestCase1, file: undefined };
+            // Mock the test case without file
+            const originalGet = rustAdapter['testCases'].get;
+            rustAdapter['testCases'].get = Sinon.stub().returns(testCaseWithoutFile);
+
+            await commandCallback(testCaseWithoutFile.id);
+
+            assert.isTrue(logWarnStub.calledWith(`No file location available for test: ${testCaseWithoutFile.id}`));
+
+            // Restore original method
+            rustAdapter['testCases'].get = originalGet;
+        });
+
+        test('Should handle navigation command errors gracefully', async () => {
+            const testId = 'test::id';
+
+            await commandCallback(testId);
+
+            // Should attempt to handle the navigation request
+            assert.isTrue(logInfoStub.calledWith(`Handling navigation request for test: ${testId}`));
         });
     });
 
