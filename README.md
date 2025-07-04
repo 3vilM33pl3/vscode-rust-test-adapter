@@ -42,13 +42,43 @@ MIT - see license details [here][license-url]
 
 - 🔍 **Test Discovery**: Automatically discovers unit, integration, and documentation tests in your Rust projects
 - ▶️ **Test Execution**: Run tests individually or in groups directly from the Test Explorer
-- 📍 **Go to Test**: Click on any test to navigate directly to its source code (NEW in v0.11.5!)
+- 📍 **Go to Test**: Click on any test to navigate directly to its source code
 - 🔧 **Workspace Support**: Works with both single packages and Cargo workspaces
-- 📊 **Test Results**: View test results with detailed output and error information
+- 📊 **Test Results**: View test results with detailed output and error information (NEW in v0.11.6!)
 - 🚀 **Performance**: Efficient test discovery and execution using Cargo's native capabilities
 - 🐞 **Enhanced Logging**: Comprehensive logging for debugging test discovery and navigation
 
-## New in v0.11.4 Integration tests
+## New in v0.11.6: Test Output Display
+
+This version adds support for displaying detailed test output in the Test Explorer:
+
+- **Detailed Failure Messages**: When tests fail, you can now see the complete output including:
+  - Assertion failure details with expected vs actual values
+  - Panic messages and stack traces
+  - File locations and line numbers where failures occurred
+  - Any custom output from your tests
+- **Improved Cargo Path Detection**: The extension now uses the `which` command to find cargo instead of hardcoded paths
+- **Enhanced Error Handling**: Better error messages when cargo commands fail
+
+### How Test Output Works
+
+When a test fails, the Test Explorer will now show:
+1. The test status (passed/failed/skipped)
+2. For failed tests, the complete error message in the test details panel
+3. All output that would normally appear when running `cargo test` in the terminal
+
+This makes debugging test failures much easier without having to switch to the terminal!
+
+## New in v0.11.5: Navigate to Unit Tests
+
+This version introduced the ability to navigate directly to unit test source code:
+
+- **Click to Navigate**: Click on any unit test in the Test Explorer to jump directly to its location in the source code
+- **Smart Navigation**: The extension automatically determines the correct file location based on Rust's module structure
+- **Fallback Search**: If the test location cannot be determined from the module path, the extension searches the workspace for the test function
+- **Enhanced Test Discovery**: Improved test location tracking during the discovery phase
+
+## New in v0.11.4: Integration Tests
 
 This version adds support for integration tests
 
