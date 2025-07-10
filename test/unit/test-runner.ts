@@ -73,7 +73,7 @@ suite('testRunner Tests:', () => {
             await runTestCase(binTestCase3, workspaceDir, logStub, null);
             const args: ICargoTestExecutionParameters = runCargoTestsForPackageTargetWithPrettyFormatStub.firstCall.args[0];
             assert.deepEqual(args, <ICargoTestExecutionParameters> {
-                cargoSubCommandArgs: `${binTestCase3.testSpecName} -q`,
+                cargoSubCommandArgs: `${binTestCase3.testSpecName}`,
                 nodeTarget: binTestCase3.nodeTarget,
                 packageName: binTestCase3.packageName,
                 targetWorkspace: workspaceDir,
@@ -134,14 +134,14 @@ suite('testRunner Tests:', () => {
             assert.deepEqual(runCargoTestsForPackageTargetWithPrettyFormatStub.callCount, 2);
             const firstTargetArgs: ICargoTestExecutionParameters = runCargoTestsForPackageTargetWithPrettyFormatStub.firstCall.args[0];
             assert.deepEqual(firstTargetArgs, <ICargoTestExecutionParameters> {
-                cargoSubCommandArgs: `${testSuite.testSpecName} --no-fail-fast -q`,
+                cargoSubCommandArgs: `${testSuite.testSpecName} --no-fail-fast`,
                 nodeTarget: firstTarget,
                 packageName: testSuite.packageName,
                 targetWorkspace: workspaceDir
             });
             const secondTargetArgs: ICargoTestExecutionParameters = runCargoTestsForPackageTargetWithPrettyFormatStub.secondCall.args[0];
             assert.deepEqual(secondTargetArgs, <ICargoTestExecutionParameters> {
-                cargoSubCommandArgs: `${testSuite.testSpecName} --no-fail-fast -q`,
+                cargoSubCommandArgs: `${testSuite.testSpecName} --no-fail-fast`,
                 nodeTarget: secondTarget,
                 packageName: testSuite.packageName,
                 targetWorkspace: workspaceDir

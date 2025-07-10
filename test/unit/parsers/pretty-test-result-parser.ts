@@ -70,8 +70,8 @@ suite('pretty-test-result-parser Tests:', () => {
             assert.deepEqual(testResults, [ testAddResultEvent, testBadAddResultEvent ]);
             assert.isTrue(getTestEventStateStub.firstCall.calledWithExactly('ok'));
             assert.isTrue(getTestEventStateStub.secondCall.calledWithExactly('failed'));
-            assert.isTrue(buildTestEventStub.firstCall.calledWithExactly('passed', testAddResultEvent.test));
-            assert.isTrue(buildTestEventStub.secondCall.calledWithExactly('failed', testBadAddResultEvent.test));
+            assert.isTrue(buildTestEventStub.firstCall.calledWithExactly('passed', testAddResultEvent.test, undefined));
+            assert.isTrue(buildTestEventStub.secondCall.calledWithExactly('failed', testBadAddResultEvent.test, undefined));
         });
 
         test('Should return correct results when test output contains extra output', () => {

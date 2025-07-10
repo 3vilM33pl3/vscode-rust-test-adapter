@@ -27,14 +27,16 @@ export const runTestCase = async (
     try {
         const { packageName, nodeTarget, testSpecName, nodeIdPrefix } = testCaseNode;
         const params = <ICargoTestExecutionParameters> {
-            cargoSubCommandArgs: `${testSpecName} -q`,
+            cargoSubCommandArgs: `${testSpecName}`,
             nodeTarget: nodeTarget,
             packageName,
             targetWorkspace: workspaceRootDir,
-            testBinaryArgs: '--exact'
+            testBinaryArgs: '--exact',
+            log
         };
         const output = await runCargoTestsForPackageTargetWithPrettyFormat(params);
-        resolve(parseTestCaseResultPrettyOutput(nodeIdPrefix, output)[0]);
+        const results = parseTestCaseResultPrettyOutput(nodeIdPrefix, output);
+        resolve(results[0]);
     } catch (err) {
         const testName = testCaseNode && testCaseNode.testSpecName ? testCaseNode.testSpecName : 'unknown';
         const baseErrorMessage = `Fatal error while attempting to run Test Case: ${testName}`;
@@ -46,10 +48,10 @@ export const runTestCase = async (
 /**
  * Runs a test suite.
  *
- * @param {ITestSuiteNode} testCaseNode - The test suite to run.
- * @param {string} workspaceRoot - The root directory of the Cargo workspace.
+ * @param {ITestSuiteNode} testSuiteNode - The test suite to run.
+ * @param {string} workspaceRootDir - The root directory of the Cargo workspace.
  * @param {Log} log - The logger.
- * @param {IConfiguration} config - The configuration options.
+ * @param {IConfiguration} _config - The configuration options.
  */
 export const runTestSuite = async (
     testSuiteNode: ITestSuiteNode,
@@ -62,10 +64,11 @@ export const runTestSuite = async (
         const results = await Promise.all(targets.map(async target => {
             const testIdPrefix = `${packageName}::${target.targetName}::${target.targetType}`;
             const params = <ICargoTestExecutionParameters> {
-                cargoSubCommandArgs: `${testSpecName} --no-fail-fast -q`,
+                cargoSubCommandArgs: `${testSpecName} --no-fail-fast`,
                 nodeTarget: target,
                 packageName,
-                targetWorkspace: workspaceRootDir
+                targetWorkspace: workspaceRootDir,
+                log
             };
             const output = await runCargoTestsForPackageTargetWithPrettyFormat(params);
             return parseTestCaseResultPrettyOutput(testIdPrefix, output).filter(e => e.test.toString().startsWith(id));

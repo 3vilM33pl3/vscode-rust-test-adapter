@@ -32,72 +32,50 @@ export const runCargoCommand = async (
     allowStderr: boolean = false,
     requireStderr: boolean = false
 ) => new Promise<string>((resolve, reject) => {
-    // Try to find cargo - prioritize snap path since user confirmed it's there
-    let cargoPath = process.env.CARGO_PATH || '/snap/bin/cargo';
-    
-    // If snap path doesn't work, fall back to PATH lookup
-    if (cargoPath === '/snap/bin/cargo') {
-        // Test if snap cargo exists first
-        try {
-            require('fs').accessSync('/snap/bin/cargo', require('fs').constants.F_OK);
-        } catch {
-            cargoPath = 'cargo'; // Fall back to PATH lookup
-        }
-    }
-    
-    const cmd = `${cargoPath} ${subCommand} ${args}`;
+    // Use which command to find cargo
     const execArgs: ExecOptions = {
         cwd: targetWorkspace,
         maxBuffer,
         env: {
             ...process.env,
-            PATH: `${process.env.PATH}:/snap/bin:/usr/local/bin:${process.env.HOME}/.cargo/bin`
+            PATH: `${process.env.PATH}:/usr/local/bin:${process.env.HOME}/.cargo/bin`
         }
     };
     
-    // Log the command being executed
-    console.log(`[DEBUG] Executing command: ${cmd}`);
-    console.log(`[DEBUG] Working directory: ${targetWorkspace}`);
-    console.log(`[DEBUG] Max buffer: ${maxBuffer}`);
-    console.log(`[DEBUG] PATH: ${process.env.PATH}`);
-    console.log(`[DEBUG] CARGO_HOME: ${process.env.CARGO_HOME || 'Not set'}`);
-    console.log(`[DEBUG] RUSTUP_HOME: ${process.env.RUSTUP_HOME || 'Not set'}`);
-    
-    // Test if cargo is available first
-    exec('which cargo', { cwd: targetWorkspace }, (whichErr, whichStdout, whichStderr) => {
-        console.log(`[DEBUG] 'which cargo' result:`);
-        console.log(`[DEBUG]   Error: ${whichErr ? whichErr.message : 'None'}`);
-        console.log(`[DEBUG]   Path: ${whichStdout || 'Not found'}`);
-        console.log(`[DEBUG]   Stderr: ${whichStderr || 'None'}`);
-    });
-    
-    exec(cmd, execArgs, (err, stdout, stderr) => {
-        console.log(`[DEBUG] Command completed:`);
-        console.log(`[DEBUG]   Error: ${err ? err.message : 'None'}`);
-        console.log(`[DEBUG]   Exit code: ${err ? err.code : 'N/A'}`);
-        console.log(`[DEBUG]   Stdout length: ${stdout ? stdout.length : 0}`);
-        console.log(`[DEBUG]   Stderr length: ${stderr ? stderr.length : 0}`);
-        console.log(`[DEBUG]   Stderr content: ${stderr || 'None'}`);
+    // First, find cargo using which command
+    exec('which cargo', execArgs, (whichErr, whichStdout, whichStderr) => {
+        let cargoPath = 'cargo'; // Default fallback
         
-        if (err) {
-            const errorDetails = {
-                command: cmd,
-                workingDirectory: targetWorkspace,
-                exitCode: err.code,
-                signal: err.signal,
-                stderr: stderr,
-                stdout: stdout
-            };
-            const enhancedError = new Error(`Command failed: ${cmd}\nExit code: ${err.code}\nStderr: ${stderr}\nStdout: ${stdout}`);
-            (enhancedError as any).details = errorDetails;
-            
-            if (!allowStderr) {
-                return reject(enhancedError);
-            } else if (!stderr && requireStderr) {
-                return reject(enhancedError);
-            }
+        if (!whichErr && whichStdout && whichStdout.trim()) {
+            cargoPath = whichStdout.trim();
+        } else if (process.env.CARGO_PATH) {
+            // Use environment variable if set
+            cargoPath = process.env.CARGO_PATH;
         }
-        resolve(stdout);
+        
+        const cmd = `${cargoPath} ${subCommand} ${args}`;
+        
+        exec(cmd, execArgs, (err, stdout, stderr) => {
+            if (err) {
+                const errorDetails = {
+                    command: cmd,
+                    workingDirectory: targetWorkspace,
+                    exitCode: err.code,
+                    signal: err.signal,
+                    stderr: stderr,
+                    stdout: stdout
+                };
+                const enhancedError = new Error(`Command failed: ${cmd}\nExit code: ${err.code}\nStderr: ${stderr}\nStdout: ${stdout}`);
+                (enhancedError as any).details = errorDetails;
+                
+                if (!allowStderr) {
+                    return reject(enhancedError);
+                } else if (!stderr && requireStderr) {
+                    return reject(enhancedError);
+                }
+            }
+            resolve(stdout);
+        });
     });
 });
 
@@ -111,18 +89,6 @@ export const getCargoMetadata = async (
     let stdout = '';
     try {
         stdout = await runCargoCommand(cargoSubCommand, args, targetWorkspace, maxBuffer);
-        if (log.enabled) {
-            log.debug(`Cargo metadata command output length: ${stdout.length}`);
-            log.debug(`Cargo metadata raw output: ${stdout.substring(0, 200)}${stdout.length > 200 ? '...' : ''}`);
-        }
-        
-        if (!stdout || stdout.trim().length === 0) {
-            const errorMessage = 'Cargo metadata command returned empty output';
-            log.debug(errorMessage);
-            reject(new Error(errorMessage));
-            return;
-        }
-        
         const cargoMetadata: ICargoMetadata = JSON.parse(stdout);
         resolve(cargoMetadata);
     } catch (err) {
